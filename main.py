@@ -21,7 +21,7 @@ def generate_sequence(P: int, Q: int, x0: int, x1: int, n: int) -> List[int]:
 
     seq = [x0, x1]
     for i in range(2, n + 1):
-        seq.append(P * seq[i - 1] - Q * seq[i - 2])
+        seq.append(P * seq[i-1] - Q * seq[i-2])
     return seq
 
 
@@ -130,6 +130,134 @@ def analyze_sequence(P: int, Q: int, x0: int, x1: int, max_n: int = 20,
     print()
 
     return seq, is_div, is_strong
+
+
+def scan_all(P_range: Tuple[int, int], Q_range: Tuple[int, int],
+             x0_range: Tuple[int, int], x1_range: Tuple[int, int],
+             max_n: int = 20) -> List[dict]:
+    """
+    Scan all combinations of P, Q, x0, x1 in given ranges and test for divisibility.
+
+    Parameters:
+        P_range: (min_P, max_P) inclusive
+        Q_range: (min_Q, max_Q) inclusive
+        x0_range: (min_x0, max_x0) inclusive
+        x1_range: (min_x1, max_x1) inclusive
+        max_n: Number of terms to generate and test
+
+    Returns:
+        List of results for sequences that ARE divisibility sequences
+    """
+    results = []
+    divisibility_sequences = []
+    strong_divisibility_sequences = []
+
+    P_count = P_range[1] - P_range[0] + 1
+    Q_count = Q_range[1] - Q_range[0] + 1
+    x0_count = x0_range[1] - x0_range[0] + 1
+    x1_count = x1_range[1] - x1_range[0] + 1
+    total = P_count * Q_count * x0_count * x1_count
+    checked = 0
+
+    print("=" * 60)
+    print("Full Parameter Scan")
+    print("=" * 60)
+    print(f"P range: [{P_range[0]}, {P_range[1]}]")
+    print(f"Q range: [{Q_range[0]}, {Q_range[1]}]")
+    print(f"x_0 range: [{x0_range[0]}, {x0_range[1]}]")
+    print(f"x_1 range: [{x1_range[0]}, {x1_range[1]}]")
+    print(f"Testing up to n = {max_n}")
+    print(f"Total combinations: {total}")
+    print()
+
+    for P in range(P_range[0], P_range[1] + 1):
+        for Q in range(Q_range[0], Q_range[1] + 1):
+            # Skip degenerate case
+            if Q == 0:
+                checked += x0_count * x1_count
+                continue
+
+            discriminant = P * P - 4 * Q
+
+            for x0 in range(x0_range[0], x0_range[1] + 1):
+                for x1 in range(x1_range[0], x1_range[1] + 1):
+                    checked += 1
+
+                    # Skip trivial case
+                    if x0 == 0 and x1 == 0:
+                        continue
+
+                    seq = generate_sequence(P, Q, x0, x1, max_n)
+
+                    # Check if sequence becomes trivial
+                    if all(s == 0 for s in seq[1:]):
+                        continue
+
+                    is_div, _ = check_divisibility(seq, verbose=False)
+                    is_strong, _ = check_strong_divisibility(seq, verbose=False)
+
+                    result = {
+                        'P': P,
+                        'Q': Q,
+                        'x0': x0,
+                        'x1': x1,
+                        'discriminant': discriminant,
+                        'is_divisibility': is_div,
+                        'is_strong_divisibility': is_strong,
+                        'first_terms': seq[:6]
+                    }
+                    results.append(result)
+
+                    if is_div:
+                        divisibility_sequences.append(result)
+                    if is_strong:
+                        strong_divisibility_sequences.append(result)
+
+    # Print summary
+    print(f"Checked {checked} combinations\n")
+
+    print("-" * 60)
+    print(f"DIVISIBILITY SEQUENCES FOUND: {len(divisibility_sequences)}")
+    print("-" * 60)
+    if divisibility_sequences:
+        for r in divisibility_sequences:
+            strong_marker = " [STRONG]" if r['is_strong_divisibility'] else ""
+            print(f"  P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}{strong_marker}")
+            print(f"    First terms: {r['first_terms']}")
+    else:
+        print("  None found.")
+    print()
+
+    print("-" * 60)
+    print(f"STRONG DIVISIBILITY SEQUENCES: {len(strong_divisibility_sequences)}")
+    print("-" * 60)
+    if strong_divisibility_sequences:
+        for r in strong_divisibility_sequences:
+            print(f"  P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}")
+    else:
+        print("  None found.")
+    print()
+
+    # Analyze patterns
+    if divisibility_sequences:
+        print("-" * 60)
+        print("PATTERN ANALYSIS")
+        print("-" * 60)
+
+        # Check if x0=0 is required
+        x0_zero_count = sum(1 for r in divisibility_sequences if r['x0'] == 0)
+        x0_nonzero_count = len(divisibility_sequences) - x0_zero_count
+        print(f"  With x_0 = 0: {x0_zero_count}")
+        print(f"  With x_0 ≠ 0: {x0_nonzero_count}")
+
+        if x0_nonzero_count > 0:
+            print("\n  Non-zero x_0 cases:")
+            for r in divisibility_sequences:
+                if r['x0'] != 0:
+                    print(f"    P={r['P']}, Q={r['Q']}, x_0={r['x0']}, x_1={r['x1']}")
+        print()
+
+    return results
 
 
 def scan_initial_conditions(P: int, Q: int, x0_range: Tuple[int, int],
@@ -329,6 +457,7 @@ def main():
     print("  1) Single test")
     print("  2) Scan P,Q range (fixed initial conditions)")
     print("  3) Scan initial conditions range (fixed P,Q)")
+    print("  4) Scan all (P, Q, x_0, x_1 ranges)")
     mode = input("Select mode [default 1]: ").strip()
 
     if mode == '2':
@@ -368,6 +497,29 @@ def main():
 
         print()
         scan_initial_conditions(P, Q, (x0_min, x0_max), (x1_min, x1_max), max_n)
+
+    elif mode == '4':
+        # Scan all mode
+        try:
+            print("\nEnter P range:")
+            P_min = int(input("  P min: "))
+            P_max = int(input("  P max: "))
+            print("Enter Q range:")
+            Q_min = int(input("  Q min: "))
+            Q_max = int(input("  Q max: "))
+            print("Enter x_0 range:")
+            x0_min = int(input("  x_0 min: "))
+            x0_max = int(input("  x_0 max: "))
+            print("Enter x_1 range:")
+            x1_min = int(input("  x_1 min: "))
+            x1_max = int(input("  x_1 max: "))
+            max_n = int(input("Enter max index to test (default 20): ") or "20")
+        except ValueError:
+            print("Invalid input. Please enter integers.")
+            return
+
+        print()
+        scan_all((P_min, P_max), (Q_min, Q_max), (x0_min, x0_max), (x1_min, x1_max), max_n)
 
     else:
         # Single test mode
