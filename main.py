@@ -23,7 +23,7 @@ def generate_sequence(P: int, Q: int, x0: int, x1: int, n: int) -> List[int]:
 
     seq = [x0, x1]
     for i in range(2, n + 1):
-        seq.append(P * seq[i-1] - Q * seq[i-2])
+        seq.append(P * seq[i - 1] - Q * seq[i - 2])
     return seq
 
 
@@ -149,7 +149,7 @@ def write_results_to_file(filename: str, scan_type: str, params: dict,
                           strong_divisibility_sequences: List[dict],
                           total_checked: int):
     """Write scan results to a file."""
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         # Header
         f.write("=" * 70 + "\n")
         f.write(f"DIVISIBILITY SEQUENCE SCAN RESULTS\n")
@@ -174,7 +174,8 @@ def write_results_to_file(filename: str, scan_type: str, params: dict,
             for r in divisibility_sequences:
                 strong_marker = " [STRONG]" if r.get('is_strong_divisibility', False) else ""
                 if 'P' in r and 'x0' in r:
-                    f.write(f"P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}{strong_marker}\n")
+                    f.write(
+                        f"P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}{strong_marker}\n")
                 elif 'P' in r:
                     f.write(f"P={r['P']:3}, Q={r['Q']:3}, Δ={r['discriminant']:4}{strong_marker}\n")
                 else:
