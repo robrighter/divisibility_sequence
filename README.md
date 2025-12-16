@@ -45,6 +45,11 @@ The program offers four modes:
 3. **Scan initial conditions range** — Test multiple initial conditions with fixed $P$, $Q$
 4. **Scan all** — Test all combinations of $P$, $Q$, $x_0$, $x_1$ in specified ranges
 
+All scan modes include:
+- A **progress bar** showing scan completion
+- **File output** containing the full list of found sequences
+- **Console summary** with key statistics
+
 ### Programmatic Usage
 
 ```python
@@ -59,10 +64,22 @@ from divisibility_tester import (
 seq, is_div, is_strong = analyze_sequence(P=1, Q=-1, x0=0, x1=1, max_n=20)
 
 # Scan P,Q combinations with U-type initial conditions
-results = scan_parameters(P_range=(-5, 5), Q_range=(-5, 5), x0=0, x1=1, max_n=15)
+results = scan_parameters(
+    P_range=(-5, 5), 
+    Q_range=(-5, 5), 
+    x0=0, x1=1, 
+    max_n=15,
+    output_file="pq_scan_results.txt"
+)
 
 # Scan initial conditions for Fibonacci recurrence
-results = scan_initial_conditions(P=1, Q=-1, x0_range=(-10, 10), x1_range=(-10, 10), max_n=15)
+results = scan_initial_conditions(
+    P=1, Q=-1, 
+    x0_range=(-10, 10), 
+    x1_range=(-10, 10), 
+    max_n=15,
+    output_file="initial_conditions_scan.txt"
+)
 
 # Full parameter scan
 results = scan_all(
@@ -70,7 +87,8 @@ results = scan_all(
     Q_range=(-3, 3), 
     x0_range=(-5, 5), 
     x1_range=(-5, 5), 
-    max_n=15
+    max_n=15,
+    output_file="full_scan_results.txt"
 )
 ```
 
@@ -83,39 +101,82 @@ results = scan_all(
 | `max_n` | Maximum index to test (default: 20) |
 | `show_terms` | Display individual sequence terms (default: True) |
 | `verbose` | Show detailed failure information (default: True) |
+| `output_file` | Filename for scan results (default: auto-generated with timestamp) |
 
-## Output
+### Output Files
 
-The tool tests two properties:
+Scan operations generate output files containing:
 
-1. **Divisibility property**: $m \mid n \Rightarrow x_m \mid x_n$
-2. **Strong divisibility property**: $\gcd(x_m, x_n) = x_{\gcd(m,n)}$
+1. **Header** — Timestamp and scan type
+2. **Scan Parameters** — All input ranges and settings
+3. **Divisibility Sequences** — Full list with parameters and first terms
+4. **Strong Divisibility Sequences** — Subset satisfying the stronger gcd property
+5. **Pattern Analysis** — Breakdown of $x_0 = 0$ vs $x_0 \neq 0$ cases
+6. **Summary** — Total counts and statistics
 
-Example output:
+Example output file structure:
+```
+======================================================================
+DIVISIBILITY SEQUENCE SCAN RESULTS
+Generated: 2025-12-16 00:46:07
+======================================================================
+
+SCAN PARAMETERS
+----------------------------------------------------------------------
+Scan type: Full Parameter Scan
+P range: [-2, 2]
+Q range: [-2, 2]
+...
+
+======================================================================
+DIVISIBILITY SEQUENCES FOUND: 336
+======================================================================
+
+P= -2, Q= -2, x_0=  0, x_1= -3, Δ=  12
+  First terms: [0, -3, 6, -18, 48, -132]
+...
+
+======================================================================
+SUMMARY
+======================================================================
+Total combinations checked: 1225
+Divisibility sequences found: 336
+Strong divisibility sequences found: 152
+```
+
+If no filename is specified, files are auto-generated with timestamps (e.g., `scan_all_20251216_003703.txt`).
+
+## Console Output
+
+During scans, the console displays:
+
+1. **Scan configuration** — Parameter ranges and total combinations
+2. **Progress bar** — Visual progress indicator with percentage
+3. **Summary** — Key statistics (no sequence listings)
 
 ```
 ============================================================
-Sequence Analysis
+Full Parameter Scan
 ============================================================
-Recurrence: x_n = 1 * x_{n-1} - (-1) * x_{n-2}
-Initial conditions: x_0 = 0, x_1 = 1
-Characteristic polynomial: x² - 1x + -1 = 0
-Discriminant Δ = 5
+P range: [-2, 2]
+Q range: [-2, 2]
+x_0 range: [-3, 3]
+x_1 range: [-3, 3]
+Testing up to n = 15
+Total combinations: 1225
 
-First 9 terms:
-  x_0 = 0
-  x_1 = 1
-  x_2 = 1
-  x_3 = 2
-  x_4 = 3
-  x_5 = 5
-  x_6 = 8
-  x_7 = 13
-  x_8 = 21
+  Progress: |████████████████████████████████████████| 100.0% (1225/1225)
 
-✓ DIVISIBILITY PROPERTY: Satisfied (up to n = 8)
+============================================================
+SUMMARY
+============================================================
+Total combinations checked: 1225
+Divisibility sequences found: 336
+Strong divisibility sequences found: 152
+Divisibility sequences with x_0 = 0: 120
+Divisibility sequences with x_0 ≠ 0: 216
 
-✓ STRONG DIVISIBILITY: Satisfied (up to n = 8)
+Results written to: scan_all_20251216_003703.txt
 ```
 
 ## Key Findings
