@@ -9,6 +9,8 @@ Initial conditions: x_0, x_1
 """
 
 import math
+import sys
+from datetime import datetime
 from typing import Tuple, List, Optional
 
 
@@ -76,6 +78,16 @@ def check_strong_divisibility(seq: List[int], verbose: bool = False) -> Tuple[bo
     return True, None
 
 
+def print_progress_bar(current: int, total: int, width: int = 40):
+    """Print a progress bar to the console."""
+    progress = current / total
+    filled = int(width * progress)
+    bar = "█" * filled + "░" * (width - filled)
+    percent = progress * 100
+    sys.stdout.write(f"\r  Progress: |{bar}| {percent:5.1f}% ({current}/{total})")
+    sys.stdout.flush()
+
+
 def analyze_sequence(P: int, Q: int, x0: int, x1: int, max_n: int = 20,
                      verbose: bool = True, show_terms: bool = True):
     """
@@ -132,21 +144,122 @@ def analyze_sequence(P: int, Q: int, x0: int, x1: int, max_n: int = 20,
     return seq, is_div, is_strong
 
 
+def write_results_to_file(filename: str, scan_type: str, params: dict,
+                          divisibility_sequences: List[dict],
+                          strong_divisibility_sequences: List[dict],
+                          total_checked: int):
+    """Write scan results to a file."""
+    with open(filename, 'w') as f:
+        # Header
+        f.write("=" * 70 + "\n")
+        f.write(f"DIVISIBILITY SEQUENCE SCAN RESULTS\n")
+        f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write("=" * 70 + "\n\n")
+
+        # Scan parameters
+        f.write("SCAN PARAMETERS\n")
+        f.write("-" * 70 + "\n")
+        f.write(f"Scan type: {scan_type}\n")
+        for key, value in params.items():
+            f.write(f"{key}: {value}\n")
+        f.write(f"Total combinations checked: {total_checked}\n")
+        f.write("\n")
+
+        # Divisibility sequences
+        f.write("=" * 70 + "\n")
+        f.write(f"DIVISIBILITY SEQUENCES FOUND: {len(divisibility_sequences)}\n")
+        f.write("=" * 70 + "\n\n")
+
+        if divisibility_sequences:
+            for r in divisibility_sequences:
+                strong_marker = " [STRONG]" if r.get('is_strong_divisibility', False) else ""
+                if 'P' in r and 'x0' in r:
+                    f.write(f"P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}{strong_marker}\n")
+                elif 'P' in r:
+                    f.write(f"P={r['P']:3}, Q={r['Q']:3}, Δ={r['discriminant']:4}{strong_marker}\n")
+                else:
+                    f.write(f"x_0={r['x0']:3}, x_1={r['x1']:3}{strong_marker}\n")
+                f.write(f"  First terms: {r['first_terms']}\n\n")
+        else:
+            f.write("None found.\n\n")
+
+        # Strong divisibility sequences
+        f.write("=" * 70 + "\n")
+        f.write(f"STRONG DIVISIBILITY SEQUENCES: {len(strong_divisibility_sequences)}\n")
+        f.write("=" * 70 + "\n\n")
+
+        if strong_divisibility_sequences:
+            for r in strong_divisibility_sequences:
+                if 'P' in r and 'x0' in r:
+                    f.write(f"P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}\n")
+                elif 'P' in r:
+                    f.write(f"P={r['P']:3}, Q={r['Q']:3}, Δ={r['discriminant']:4}\n")
+                else:
+                    f.write(f"x_0={r['x0']:3}, x_1={r['x1']:3}\n")
+        else:
+            f.write("None found.\n")
+
+        # Pattern analysis for scans with x0
+        if divisibility_sequences and 'x0' in divisibility_sequences[0]:
+            f.write("\n")
+            f.write("=" * 70 + "\n")
+            f.write("PATTERN ANALYSIS\n")
+            f.write("=" * 70 + "\n\n")
+
+            x0_zero_count = sum(1 for r in divisibility_sequences if r['x0'] == 0)
+            x0_nonzero_count = len(divisibility_sequences) - x0_zero_count
+            f.write(f"With x_0 = 0: {x0_zero_count}\n")
+            f.write(f"With x_0 ≠ 0: {x0_nonzero_count}\n\n")
+
+            if x0_nonzero_count > 0:
+                f.write("Non-zero x_0 cases:\n")
+                for r in divisibility_sequences:
+                    if r['x0'] != 0:
+                        if 'P' in r:
+                            f.write(f"  P={r['P']}, Q={r['Q']}, x_0={r['x0']}, x_1={r['x1']}\n")
+                        else:
+                            f.write(f"  x_0={r['x0']}, x_1={r['x1']}\n")
+
+        # Summary at bottom
+        f.write("\n")
+        f.write("=" * 70 + "\n")
+        f.write("SUMMARY\n")
+        f.write("=" * 70 + "\n")
+        f.write(f"Total combinations checked: {total_checked}\n")
+        f.write(f"Divisibility sequences found: {len(divisibility_sequences)}\n")
+        f.write(f"Strong divisibility sequences found: {len(strong_divisibility_sequences)}\n")
+        if divisibility_sequences and 'x0' in divisibility_sequences[0]:
+            x0_zero_count = sum(1 for r in divisibility_sequences if r['x0'] == 0)
+            f.write(f"Divisibility sequences with x_0 = 0: {x0_zero_count}\n")
+            f.write(f"Divisibility sequences with x_0 ≠ 0: {len(divisibility_sequences) - x0_zero_count}\n")
+
+
+def print_summary(divisibility_sequences: List[dict], strong_divisibility_sequences: List[dict],
+                  total_checked: int, filename: str):
+    """Print summary to console."""
+    print("\n")
+    print("=" * 60)
+    print("SUMMARY")
+    print("=" * 60)
+    print(f"Total combinations checked: {total_checked}")
+    print(f"Divisibility sequences found: {len(divisibility_sequences)}")
+    print(f"Strong divisibility sequences found: {len(strong_divisibility_sequences)}")
+
+    if divisibility_sequences and 'x0' in divisibility_sequences[0]:
+        x0_zero_count = sum(1 for r in divisibility_sequences if r['x0'] == 0)
+        x0_nonzero_count = len(divisibility_sequences) - x0_zero_count
+        print(f"Divisibility sequences with x_0 = 0: {x0_zero_count}")
+        print(f"Divisibility sequences with x_0 ≠ 0: {x0_nonzero_count}")
+
+    print(f"\nResults written to: {filename}")
+    print()
+
+
 def scan_all(P_range: Tuple[int, int], Q_range: Tuple[int, int],
              x0_range: Tuple[int, int], x1_range: Tuple[int, int],
-             max_n: int = 20) -> List[dict]:
+             max_n: int = 20, output_file: str = None) -> List[dict]:
     """
     Scan all combinations of P, Q, x0, x1 in given ranges and test for divisibility.
-
-    Parameters:
-        P_range: (min_P, max_P) inclusive
-        Q_range: (min_Q, max_Q) inclusive
-        x0_range: (min_x0, max_x0) inclusive
-        x1_range: (min_x1, max_x1) inclusive
-        max_n: Number of terms to generate and test
-
-    Returns:
-        List of results for sequences that ARE divisibility sequences
     """
     results = []
     divisibility_sequences = []
@@ -175,6 +288,7 @@ def scan_all(P_range: Tuple[int, int], Q_range: Tuple[int, int],
             # Skip degenerate case
             if Q == 0:
                 checked += x0_count * x1_count
+                print_progress_bar(checked, total)
                 continue
 
             discriminant = P * P - 4 * Q
@@ -182,6 +296,9 @@ def scan_all(P_range: Tuple[int, int], Q_range: Tuple[int, int],
             for x0 in range(x0_range[0], x0_range[1] + 1):
                 for x1 in range(x1_range[0], x1_range[1] + 1):
                     checked += 1
+
+                    if checked % 100 == 0 or checked == total:
+                        print_progress_bar(checked, total)
 
                     # Skip trivial case
                     if x0 == 0 and x1 == 0:
@@ -213,66 +330,36 @@ def scan_all(P_range: Tuple[int, int], Q_range: Tuple[int, int],
                     if is_strong:
                         strong_divisibility_sequences.append(result)
 
-    # Print summary
-    print(f"Checked {checked} combinations\n")
+    print_progress_bar(total, total)
+    print("\n")
 
-    print("-" * 60)
-    print(f"DIVISIBILITY SEQUENCES FOUND: {len(divisibility_sequences)}")
-    print("-" * 60)
-    if divisibility_sequences:
-        for r in divisibility_sequences:
-            strong_marker = " [STRONG]" if r['is_strong_divisibility'] else ""
-            print(f"  P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}{strong_marker}")
-            print(f"    First terms: {r['first_terms']}")
-    else:
-        print("  None found.")
-    print()
+    # Generate output filename if not provided
+    if output_file is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"scan_all_{timestamp}.txt"
 
-    print("-" * 60)
-    print(f"STRONG DIVISIBILITY SEQUENCES: {len(strong_divisibility_sequences)}")
-    print("-" * 60)
-    if strong_divisibility_sequences:
-        for r in strong_divisibility_sequences:
-            print(f"  P={r['P']:3}, Q={r['Q']:3}, x_0={r['x0']:3}, x_1={r['x1']:3}, Δ={r['discriminant']:4}")
-    else:
-        print("  None found.")
-    print()
+    # Write results to file
+    params = {
+        'P range': f"[{P_range[0]}, {P_range[1]}]",
+        'Q range': f"[{Q_range[0]}, {Q_range[1]}]",
+        'x_0 range': f"[{x0_range[0]}, {x0_range[1]}]",
+        'x_1 range': f"[{x1_range[0]}, {x1_range[1]}]",
+        'max_n': max_n
+    }
+    write_results_to_file(output_file, "Full Parameter Scan", params,
+                          divisibility_sequences, strong_divisibility_sequences, checked)
 
-    # Analyze patterns
-    if divisibility_sequences:
-        print("-" * 60)
-        print("PATTERN ANALYSIS")
-        print("-" * 60)
-
-        # Check if x0=0 is required
-        x0_zero_count = sum(1 for r in divisibility_sequences if r['x0'] == 0)
-        x0_nonzero_count = len(divisibility_sequences) - x0_zero_count
-        print(f"  With x_0 = 0: {x0_zero_count}")
-        print(f"  With x_0 ≠ 0: {x0_nonzero_count}")
-
-        if x0_nonzero_count > 0:
-            print("\n  Non-zero x_0 cases:")
-            for r in divisibility_sequences:
-                if r['x0'] != 0:
-                    print(f"    P={r['P']}, Q={r['Q']}, x_0={r['x0']}, x_1={r['x1']}")
-        print()
+    # Print summary to console
+    print_summary(divisibility_sequences, strong_divisibility_sequences, checked, output_file)
 
     return results
 
 
 def scan_initial_conditions(P: int, Q: int, x0_range: Tuple[int, int],
-                            x1_range: Tuple[int, int], max_n: int = 20) -> List[dict]:
+                            x1_range: Tuple[int, int], max_n: int = 20,
+                            output_file: str = None) -> List[dict]:
     """
     Scan all initial condition combinations in given ranges and test for divisibility.
-
-    Parameters:
-        P, Q: Fixed recurrence parameters
-        x0_range: (min_x0, max_x0) inclusive
-        x1_range: (min_x1, max_x1) inclusive
-        max_n: Number of terms to generate and test
-
-    Returns:
-        List of results for sequences that ARE divisibility sequences
     """
     results = []
     divisibility_sequences = []
@@ -296,6 +383,9 @@ def scan_initial_conditions(P: int, Q: int, x0_range: Tuple[int, int],
     for x0 in range(x0_range[0], x0_range[1] + 1):
         for x1 in range(x1_range[0], x1_range[1] + 1):
             checked += 1
+
+            if checked % 50 == 0 or checked == total:
+                print_progress_bar(checked, total)
 
             # Skip trivial case
             if x0 == 0 and x1 == 0:
@@ -324,47 +414,37 @@ def scan_initial_conditions(P: int, Q: int, x0_range: Tuple[int, int],
             if is_strong:
                 strong_divisibility_sequences.append(result)
 
-    # Print summary
-    print(f"Checked {checked} combinations\n")
+    print_progress_bar(total, total)
+    print("\n")
 
-    print("-" * 60)
-    print(f"DIVISIBILITY SEQUENCES FOUND: {len(divisibility_sequences)}")
-    print("-" * 60)
-    if divisibility_sequences:
-        for r in divisibility_sequences:
-            strong_marker = " [STRONG]" if r['is_strong_divisibility'] else ""
-            print(f"  x_0={r['x0']:3}, x_1={r['x1']:3}{strong_marker}")
-            print(f"    First terms: {r['first_terms']}")
-    else:
-        print("  None found.")
-    print()
+    # Generate output filename if not provided
+    if output_file is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"scan_initial_conditions_{timestamp}.txt"
 
-    print("-" * 60)
-    print(f"STRONG DIVISIBILITY SEQUENCES: {len(strong_divisibility_sequences)}")
-    print("-" * 60)
-    if strong_divisibility_sequences:
-        for r in strong_divisibility_sequences:
-            print(f"  x_0={r['x0']:3}, x_1={r['x1']:3}")
-    else:
-        print("  None found.")
-    print()
+    # Write results to file
+    params = {
+        'P': P,
+        'Q': Q,
+        'Discriminant Δ': discriminant,
+        'x_0 range': f"[{x0_range[0]}, {x0_range[1]}]",
+        'x_1 range': f"[{x1_range[0]}, {x1_range[1]}]",
+        'max_n': max_n
+    }
+    write_results_to_file(output_file, "Initial Conditions Scan", params,
+                          divisibility_sequences, strong_divisibility_sequences, checked)
+
+    # Print summary to console
+    print_summary(divisibility_sequences, strong_divisibility_sequences, checked, output_file)
 
     return results
 
 
 def scan_parameters(P_range: Tuple[int, int], Q_range: Tuple[int, int],
-                    x0: int, x1: int, max_n: int = 20) -> List[dict]:
+                    x0: int, x1: int, max_n: int = 20,
+                    output_file: str = None) -> List[dict]:
     """
     Scan all P,Q combinations in given ranges and test for divisibility.
-
-    Parameters:
-        P_range: (min_P, max_P) inclusive
-        Q_range: (min_Q, max_Q) inclusive
-        x0, x1: Initial conditions to test
-        max_n: Number of terms to generate and test
-
-    Returns:
-        List of results for sequences that ARE divisibility sequences
     """
     results = []
     divisibility_sequences = []
@@ -386,6 +466,9 @@ def scan_parameters(P_range: Tuple[int, int], Q_range: Tuple[int, int],
     for P in range(P_range[0], P_range[1] + 1):
         for Q in range(Q_range[0], Q_range[1] + 1):
             checked += 1
+
+            if checked % 20 == 0 or checked == total:
+                print_progress_bar(checked, total)
 
             # Skip degenerate cases
             if Q == 0:
@@ -417,30 +500,27 @@ def scan_parameters(P_range: Tuple[int, int], Q_range: Tuple[int, int],
             if is_strong:
                 strong_divisibility_sequences.append(result)
 
-    # Print summary
-    print(f"Checked {checked} combinations\n")
+    print_progress_bar(total, total)
+    print("\n")
 
-    print("-" * 60)
-    print(f"DIVISIBILITY SEQUENCES FOUND: {len(divisibility_sequences)}")
-    print("-" * 60)
-    if divisibility_sequences:
-        for r in divisibility_sequences:
-            strong_marker = " [STRONG]" if r['is_strong_divisibility'] else ""
-            print(f"  P={r['P']:3}, Q={r['Q']:3}, Δ={r['discriminant']:4}{strong_marker}")
-            print(f"    First terms: {r['first_terms']}")
-    else:
-        print("  None found.")
-    print()
+    # Generate output filename if not provided
+    if output_file is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"scan_parameters_{timestamp}.txt"
 
-    print("-" * 60)
-    print(f"STRONG DIVISIBILITY SEQUENCES: {len(strong_divisibility_sequences)}")
-    print("-" * 60)
-    if strong_divisibility_sequences:
-        for r in strong_divisibility_sequences:
-            print(f"  P={r['P']:3}, Q={r['Q']:3}, Δ={r['discriminant']:4}")
-    else:
-        print("  None found.")
-    print()
+    # Write results to file
+    params = {
+        'P range': f"[{P_range[0]}, {P_range[1]}]",
+        'Q range': f"[{Q_range[0]}, {Q_range[1]}]",
+        'x_0': x0,
+        'x_1': x1,
+        'max_n': max_n
+    }
+    write_results_to_file(output_file, "Parameter Scan (P, Q)", params,
+                          divisibility_sequences, strong_divisibility_sequences, checked)
+
+    # Print summary to console
+    print_summary(divisibility_sequences, strong_divisibility_sequences, checked, output_file)
 
     return results
 
@@ -472,12 +552,13 @@ def main():
             x0 = int(input("Enter x_0: "))
             x1 = int(input("Enter x_1: "))
             max_n = int(input("Enter max index to test (default 20): ") or "20")
+            output_file = input("Output filename (default: auto-generated): ").strip() or None
         except ValueError:
             print("Invalid input. Please enter integers.")
             return
 
         print()
-        scan_parameters((P_min, P_max), (Q_min, Q_max), x0, x1, max_n)
+        scan_parameters((P_min, P_max), (Q_min, Q_max), x0, x1, max_n, output_file)
 
     elif mode == '3':
         # Scan initial conditions mode
@@ -491,12 +572,13 @@ def main():
             x1_min = int(input("  x_1 min: "))
             x1_max = int(input("  x_1 max: "))
             max_n = int(input("Enter max index to test (default 20): ") or "20")
+            output_file = input("Output filename (default: auto-generated): ").strip() or None
         except ValueError:
             print("Invalid input. Please enter integers.")
             return
 
         print()
-        scan_initial_conditions(P, Q, (x0_min, x0_max), (x1_min, x1_max), max_n)
+        scan_initial_conditions(P, Q, (x0_min, x0_max), (x1_min, x1_max), max_n, output_file)
 
     elif mode == '4':
         # Scan all mode
@@ -514,12 +596,13 @@ def main():
             x1_min = int(input("  x_1 min: "))
             x1_max = int(input("  x_1 max: "))
             max_n = int(input("Enter max index to test (default 20): ") or "20")
+            output_file = input("Output filename (default: auto-generated): ").strip() or None
         except ValueError:
             print("Invalid input. Please enter integers.")
             return
 
         print()
-        scan_all((P_min, P_max), (Q_min, Q_max), (x0_min, x0_max), (x1_min, x1_max), max_n)
+        scan_all((P_min, P_max), (Q_min, Q_max), (x0_min, x0_max), (x1_min, x1_max), max_n, output_file)
 
     else:
         # Single test mode
